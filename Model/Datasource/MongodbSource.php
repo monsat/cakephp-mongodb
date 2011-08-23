@@ -685,28 +685,7 @@ class MongodbSource extends DboSource {
 			$cond = array('_id' => $data['_id']);
 			unset($data['_id']);
 
-			//setting Mongo operator
-			if(empty($Model->mongoNoSetOperator)) {
-				if(!preg_grep('/^\$/', array_keys($data))) {
-					$data = array('$set' => $data);
-				} else {
-					if(!empty($data['modified'])) {
-						$modified = $data['modified'];
-						unset($data['modified']);
-						$data['$set'] = array('modified' => $modified);
-					}
-				}
-			} elseif(substr($Model->mongoNoSetOperator,0,1) === '$') {
-				if(!empty($data['modified'])) {
-					$modified = $data['modified'];
-					unset($data['modified']);
-					$data = array($Model->mongoNoSetOperator => $data, '$set' => array('modified' => $modified));
-				} else {
-					$data = array($Model->mongoNoSetOperator => $data);
-
-				}
-			}
-
+			$data = $this->buildUpdateQuery($data);
 
 			try{
 				$return = $mongoCollectionObj->update($cond, $data, array("multiple" => false));
@@ -747,7 +726,7 @@ class MongodbSource extends DboSource {
 			return false;
 		}
 
-		$fields = array('$set' => $fields);
+		$fields = $this->buildUpdateQuery($fields);
 
 		$this->_stripAlias($conditions, $Model->alias);
 		$this->_stripAlias($fields, $Model->alias, false, 'value');
@@ -768,6 +747,30 @@ class MongodbSource extends DboSource {
 			);
 		}
 		return $return;
+	}
+	protected function buildUpdateQuery($data) {
+		//setting Mongo operator
+		if(empty($Model->mongoNoSetOperator)) {
+			if(!preg_grep('/^\$/', array_keys($data))) {
+				$data = array('$set' => $data);
+			} else {
+				if(!empty($data['modified'])) {
+					$modified = $data['modified'];
+					unset($data['modified']);
+					$data['$set'] = array('modified' => $modified);
+				}
+			}
+		} elseif(substr($Model->mongoNoSetOperator,0,1) === '$') {
+			if(!empty($data['modified'])) {
+				$modified = $data['modified'];
+				unset($data['modified']);
+				$data = array($Model->mongoNoSetOperator => $data, '$set' => array('modified' => $modified));
+			} else {
+				$data = array($Model->mongoNoSetOperator => $data);
+
+			}
+		}
+		return $data;
 	}
 
 /**
